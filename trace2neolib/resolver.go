@@ -57,9 +57,9 @@ func ResolvedAddrToAsset(resolved *ResolvedAddr, ip string, iteration int) []*As
 
 	strippedIP := stripCharacters(ip, ".:[]")
 	assets = append(assets, &Asset{
-		Name:      strippedIP,
+		Name:      ip,
 		IPAddr:    ip,
-		ShortName: strippedIP,
+		ShortName: fmt.Sprintf("var%s", strippedIP),
 		Label:     "Unknown",
 	})
 

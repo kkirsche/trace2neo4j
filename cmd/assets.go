@@ -15,11 +15,13 @@
 package cmd
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
 	"github.com/kkirsche/trace2neo/cypherBuilder"
 	"github.com/kkirsche/trace2neo/trace2neolib"
 	"github.com/spf13/cobra"
@@ -28,6 +30,11 @@ import (
 var (
 	successfulResolutions,
 	failedResolutions []string
+	write                    bool
+	err                      error
+	conn                     bolt.Conn
+	username, password, host string
+	port                     int
 )
 
 // assetsCmd represents the assets command
@@ -46,6 +53,15 @@ trace2neo assets <cidr>, <cidr>, <cidr>
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		// args should be an array of CIDR notation addresses
+		if !write {
+			driver := bolt.NewDriver()
+			conn, err = driver.OpenNeo(fmt.Sprintf("bolt://%s:%s@%s:%d", username, password, host, port))
+			if err != nil {
+				logrus.WithError(err).Errorln("Failed to open connection to Neo4j. Is it running?")
+				return
+			}
+			defer conn.Close()
+		}
 		for _, cidr := range args {
 			ip, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
 			if err != nil {
@@ -78,6 +94,20 @@ trace2neo assets <cidr>, <cidr>, <cidr>
 				assets := trace2neolib.ResolvedAddrToAsset(resolved, availableIP, i)
 				if len(assets) > 0 {
 					for _, asset := range assets {
+						if !write {
+							stmt, innerLoopErr := conn.PrepareNeo("CREATE (n:Unknown {name: {name}, ip: {ip}})")
+							if innerLoopErr != nil {
+								logrus.WithError(err).Errorln("Failed to create statement.")
+								return
+							}
+							_, innerLoopErr = stmt.ExecNeo(map[string]interface{}{"shortName": asset.ShortName, "label": asset.Label, "name": asset.Name, "ip": asset.IPAddr})
+							if innerLoopErr != nil {
+								logrus.WithError(err).Errorln("Failed to execute create statement.")
+								return
+							}
+							stmt.Close()
+						}
+
 						if asset != nil {
 							assetString, innerLoopErr := cypherBuilder.BuildAsset(t, asset)
 							if innerLoopErr != nil {
@@ -91,13 +121,15 @@ trace2neo assets <cidr>, <cidr>, <cidr>
 			}
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			logrus.WithError(err).Errorln("Failed to get current working directory")
+		if write {
+			wd, err := os.Getwd()
+			if err != nil {
+				logrus.WithError(err).Errorln("Failed to get current working directory")
+			}
+			fp := wd + "/assets.cypher"
+			logrus.Infof("Writing cypher query to %s", fp)
+			cypherBuilder.WriteAssetsToFile(successfulResolutions, fp)
 		}
-		fp := wd + "/assets.cypher"
-		logrus.Infof("Writing cypher query to %s", fp)
-		cypherBuilder.WriteAssetsToFile(successfulResolutions, fp)
 
 		if verbose {
 			logrus.Debugln("Successfully resolved:")
@@ -131,10 +163,13 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// assetsCmd.PersistentFlags().String("foo", "", "A help for foo")
+	assetsCmd.PersistentFlags().StringVarP(&username, "username", "u", "neo4j", "Neo4j username")
+	assetsCmd.PersistentFlags().StringVarP(&password, "password", "p", "Example", "Neo4j password")
+	assetsCmd.PersistentFlags().StringVarP(&host, "bolt-host", "b", "localhost", "Neo4j host")
+	assetsCmd.PersistentFlags().IntVarP(&port, "port", "o", 7687, "Neo4j port")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// assetsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	assetsCmd.Flags().BoolVarP(&write, "write", "w", false, "Write to file rather than to Neo4j directly")
 
 }
