@@ -65,14 +65,17 @@ trace2neo assets <cidr>, <cidr>, <cidr>
 				return
 			}
 
+			lenIPs := len(availableIPs)
 			for i, availableIP := range availableIPs {
+				if i%250 == 0 {
+					logrus.Infof("Currently resolving %s (#%d of #%d)...", availableIP, i, lenIPs)
+				}
 				resolved, loopErr := trace2neolib.ResolveAddr(availableIP)
 				if loopErr != nil {
 					failedResolutions = append(failedResolutions, availableIP)
-					continue
 				}
 
-				assets := trace2neolib.ResolvedAddrToAsset(resolved, i)
+				assets := trace2neolib.ResolvedAddrToAsset(resolved, availableIP, i)
 				if len(assets) > 0 {
 					for _, asset := range assets {
 						if asset != nil {

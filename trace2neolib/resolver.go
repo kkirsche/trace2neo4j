@@ -39,24 +39,26 @@ func stripCharacters(str, chrs string) string {
 	}, str)
 }
 
-func ResolvedAddrToAsset(resolved *ResolvedAddr, iteration int) []*Asset {
+func ResolvedAddrToAsset(resolved *ResolvedAddr, ip string, iteration int) []*Asset {
 	var assets []*Asset
-	if len(resolved.Names) > 0 {
-		for _, name := range resolved.Names {
-			assets = append(assets, &Asset{
-				Name:      name,
-				IPAddr:    resolved.Addr,
-				ShortName: fmt.Sprintf("var%s%d", stripCharacters(name, "`~!@#$%^&*()-_=+[]{]}\t\\|'\";:,<.>/?\n `"), iteration),
-				Label:     "Unknown",
-			})
+	if resolved != nil {
+		if len(resolved.Names) > 0 {
+			for _, name := range resolved.Names {
+				assets = append(assets, &Asset{
+					Name:      name,
+					IPAddr:    resolved.Addr,
+					ShortName: fmt.Sprintf("var%s%d", stripCharacters(name, "`~!@#$%^&*()-_=+[]{]}\t\\|'\";:,<.>/?\n `"), iteration),
+					Label:     "Unknown",
+				})
+			}
+			return assets
 		}
-		return assets
 	}
 
-	strippedIP := stripCharacters(resolved.Addr, ".:[]")
+	strippedIP := stripCharacters(ip, ".:[]")
 	assets = append(assets, &Asset{
 		Name:      strippedIP,
-		IPAddr:    resolved.Addr,
+		IPAddr:    ip,
 		ShortName: strippedIP,
 		Label:     "Unknown",
 	})
