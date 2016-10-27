@@ -17,6 +17,7 @@ package cmd
 import (
 	"net"
 	"os"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kkirsche/trace2neo/cypherBuilder"
@@ -32,17 +33,21 @@ var (
 // assetsCmd represents the assets command
 var assetsCmd = &cobra.Command{
 	Use:   "assets",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Resolves CIDR blocks to Neo4j Nodes if in DNS",
+	Long: `Resolves a CIDR block or a list of CIDR blocks from DNS, and then builds
+a cypher query for use with Neo4j. The tool will output the assets.cypher file to
+the current working directory (./assets.cypher).
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+trace2neo assets <cidr>
+
+trace2neo assets <cidr>,<cidr>,<cidr>
+
+trace2neo assets <cidr>, <cidr>, <cidr>
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// args should be an array of CIDR notation addresses
 		for _, cidr := range args {
-			ip, ipnet, err := net.ParseCIDR(cidr)
+			ip, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
 			if err != nil {
 				logrus.WithError(err).Errorf("Failed to parse %s as CIDR block. Skipping...", cidr)
 				continue
