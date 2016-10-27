@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/kkirsche/trace2neo/traceroute"
+	"github.com/kkirsche/trace2neo/trace2neolib"
 	"github.com/spf13/cobra"
 )
 
@@ -48,13 +48,13 @@ to quickly create a Cobra application.`,
 				logrus.Errorf("Argument %s was not an IP. Skipping...", ip)
 				continue
 			}
-			result, err := traceroute.RunTraceroute(netip)
+			result, err := trace2neolib.RunTraceroute(netip)
 			if err != nil {
 				logrus.WithError(err).Errorln("Failed to run traceroute.")
 				continue
 			}
 
-			processedResults, err := traceroute.ProcessTracerouteOutput(result)
+			processedResults, err := trace2neolib.ProcessTracerouteOutput(result)
 			if err != nil {
 				logrus.WithError(err).Errorln("Failed to process traceroute output.")
 			}

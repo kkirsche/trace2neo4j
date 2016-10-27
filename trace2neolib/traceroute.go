@@ -1,4 +1,4 @@
-package traceroute
+package trace2neolib
 
 import (
 	"bytes"
