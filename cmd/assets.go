@@ -19,6 +19,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	bolt "github.com/johnnadratowski/golang-neo4j-bolt-driver"
@@ -62,6 +63,9 @@ trace2neo assets <cidr>, <cidr>, <cidr>
 			}
 			defer conn.Close()
 		}
+
+		startTime := time.Now().UTC()
+		logrus.Infof("Beginning IP resolution at %s UTC", startTime.String())
 		for _, cidr := range args {
 			ip, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
 			if err != nil {
@@ -85,6 +89,11 @@ trace2neo assets <cidr>, <cidr>, <cidr>
 			for i, availableIP := range availableIPs {
 				if i%250 == 0 {
 					logrus.Infof("Currently resolving %s (#%d of #%d)...", availableIP, i, lenIPs)
+				}
+				if i%1000 == 0 && i != 0 {
+					elapsedTime := time.Since(startTime)
+					remainingTime := time.Duration(((lenIPs - i) / 1000)) * elapsedTime
+					logrus.Infof("Elapsed Time: %s, Estimated Remaining Time: %s", elapsedTime.String(), remainingTime.String())
 				}
 				resolved, loopErr := trace2neolib.ResolveAddr(availableIP)
 				if loopErr != nil {
